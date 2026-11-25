@@ -2,8 +2,12 @@
 <html lang="id">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover"
+    />
     <meta name="referrer" content="no-referrer" />
+    <meta name="theme-color" content="#ffffff" />
     <title>VISION-CANE</title>
 
     <!-- Fonts: Plus Jakarta Sans & JetBrains Mono -->
@@ -41,11 +45,23 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
 
     <style>
+      :root {
+        --sat: env(safe-area-inset-top, 0px);
+        --sab: env(safe-area-inset-bottom, 0px);
+      }
+
+      * {
+        -webkit-tap-highlight-color: transparent;
+        box-sizing: border-box;
+      }
+
+      html,
       body {
         background-color: #f8f9fa;
         color: #09090b;
         -webkit-font-smoothing: antialiased;
-        -webkit-tap-highlight-color: transparent;
+        overscroll-behavior-y: contain;
+        user-select: none;
       }
 
       .startup-card {
@@ -56,13 +72,37 @@
           0 4px 14px rgba(9, 9, 11, 0.02);
       }
 
+      /* Safe Area Padding untuk Android WebView */
+      header.app-header {
+        padding-top: var(--sat);
+      }
+
+      nav.app-bottom-nav {
+        padding-bottom: calc(0.5rem + var(--sab));
+      }
+
+      main.app-main {
+        padding-bottom: calc(5.25rem + var(--sab));
+      }
+
       #map {
         width: 100%;
-        height: 340px;
+        height: 280px;
         z-index: 1;
       }
+
+      /* Tinggi peta otomatis membesar saat tab Google Maps dibuka penuh di HP */
+      .map-fullscreen-mobile #map {
+        height: calc(100dvh - 14.5rem - var(--sat) - var(--sab));
+        min-height: 360px;
+      }
+
       @media (min-width: 1024px) {
-        #map {
+        main.app-main {
+          padding-bottom: 1rem;
+        }
+        #map,
+        .map-fullscreen-mobile #map {
           height: 100%;
           min-height: 240px;
         }
@@ -80,43 +120,42 @@
       }
 
       .leaflet-control-attribution {
-        font-size: 10px !important;
+        font-size: 9px !important;
         background: rgba(255, 255, 255, 0.88) !important;
         color: #5f6368 !important;
       }
     </style>
   </head>
-  <body
-    class="min-h-screen lg:h-screen lg:overflow-hidden flex flex-col pb-20 lg:pb-0"
-  >
-    <!-- TOP NAVBAR -->
+  <body class="min-h-[100dvh] lg:h-screen lg:overflow-hidden flex flex-col">
+    <!-- TOP APP BAR -->
     <header
-      class="shrink-0 z-40 bg-white/90 backdrop-blur-xl border-b border-zinc-200/80"
+      class="app-header shrink-0 sticky top-0 z-40 bg-white/95 backdrop-blur-xl border-b border-zinc-200/80"
     >
       <div
-        class="max-w-[1440px] mx-auto px-4 sm:px-8 lg:px-10 h-14 flex items-center justify-between gap-4"
+        class="max-w-[1440px] mx-auto px-3.5 sm:px-8 lg:px-10 h-14 flex items-center justify-between gap-2"
       >
-        <div class="flex items-center gap-2.5">
+        <!-- Brand & Clock -->
+        <div class="flex items-center gap-2 min-w-0">
           <div
-            class="w-8 h-8 rounded-lg bg-zinc-950 text-white flex items-center justify-center shadow-2xs"
+            class="w-8 h-8 shrink-0 rounded-xl bg-zinc-950 text-white flex items-center justify-center shadow-2xs"
           >
             <i data-lucide="scan-eye" class="w-4 h-4"></i>
           </div>
-          <div>
-            <div class="flex items-center gap-2">
-              <span class="font-bold text-sm tracking-tight text-zinc-950"
+          <div class="min-w-0">
+            <div class="flex items-center gap-1.5">
+              <span
+                class="font-bold text-xs sm:text-sm tracking-tight text-zinc-950 truncate"
                 >VISION-CANE</span
               >
-              <span class="hidden sm:inline-block text-zinc-300">/</span>
               <span
                 class="hidden sm:inline-block font-mono text-[11px] text-zinc-500"
-                >VC-3B-8921</span
+                >/ VC-3B-8921</span
               >
             </div>
             <p
-              class="text-[10px] text-zinc-500 font-medium flex items-center gap-1.5"
+              class="text-[10px] text-zinc-500 font-medium flex items-center gap-1 truncate"
             >
-              <span>Assistive Mobility Telemetry</span>
+              <span class="truncate">Telemetry</span>
               <span>•</span>
               <span id="clock-top" class="font-mono text-zinc-700 font-semibold"
                 >--:--:--</span
@@ -125,6 +164,7 @@
           </div>
         </div>
 
+        <!-- Desktop Tabs -->
         <div
           class="hidden lg:flex items-center bg-zinc-100 p-1 rounded-xl border border-zinc-200/70"
         >
@@ -151,30 +191,31 @@
           </button>
         </div>
 
-        <div class="flex items-center gap-2">
+        <!-- Action Buttons (Mobile & Desktop Friendly) -->
+        <div class="flex items-center gap-1.5 sm:gap-2 shrink-0">
           <div
             id="status-pill"
-            class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold bg-amber-50 text-amber-700 border border-amber-200/80"
+            class="inline-flex items-center gap-1.5 px-2 sm:px-2.5 py-1 rounded-full text-[10px] sm:text-[11px] font-semibold bg-amber-50 text-amber-700 border border-amber-200/80"
           >
             <span
               id="status-dot"
               class="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse"
             ></span>
-            <span id="status-text">Connecting</span>
+            <span id="status-text">Sync</span>
           </div>
 
           <button
             onclick="bunyikanBuzzer()"
             title="Bunyikan Buzzer Tongkat"
-            class="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white hover:bg-zinc-50 active:scale-95 text-zinc-800 text-xs font-semibold border border-zinc-200 transition cursor-pointer"
+            class="inline-flex items-center justify-center gap-1 px-2.5 sm:px-3 h-8 rounded-xl bg-white hover:bg-zinc-50 active:scale-95 text-zinc-800 text-xs font-semibold border border-zinc-200 transition cursor-pointer"
           >
-            <i data-lucide="volume-2" class="w-3.5 h-3.5 text-zinc-600"></i>
-            <span>Ping</span>
+            <i data-lucide="volume-2" class="w-3.5 h-3.5 text-zinc-700"></i>
+            <span class="hidden xs:inline sm:inline">Ping</span>
           </button>
 
           <button
             onclick="kirimSOS()"
-            class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-rose-600 hover:bg-rose-700 active:scale-95 text-white text-xs font-semibold shadow-2xs transition cursor-pointer"
+            class="inline-flex items-center justify-center gap-1 px-2.5 sm:px-3 h-8 rounded-xl bg-rose-600 hover:bg-rose-700 active:scale-95 text-white text-xs font-semibold shadow-2xs transition cursor-pointer"
           >
             <i data-lucide="alert-triangle" class="w-3.5 h-3.5"></i>
             <span>SOS</span>
@@ -185,15 +226,15 @@
 
     <!-- MAIN WORKSPACE -->
     <main
-      class="flex-1 min-h-0 w-full max-w-[1440px] mx-auto px-4 sm:px-8 lg:px-10 py-3.5 lg:py-4 flex flex-col gap-3.5"
+      class="app-main flex-1 min-h-0 w-full max-w-[1440px] mx-auto px-3.5 sm:px-8 lg:px-10 pt-3 lg:py-4 flex flex-col gap-3"
     >
-      <!-- KPI METRICS BAR -->
+      <!-- KPI METRICS BAR (2x2 di Smartphone, 4 Kolom di Desktop) -->
       <section
         id="panel-ringkasan"
-        class="anim-item shrink-0 grid grid-cols-2 lg:grid-cols-4 gap-3 lg:gap-4"
+        class="anim-item shrink-0 grid grid-cols-2 lg:grid-cols-4 gap-2.5 lg:gap-4"
       >
         <div
-          class="startup-card rounded-2xl px-4 py-3 flex flex-col justify-between"
+          class="startup-card rounded-2xl px-3.5 py-2.5 sm:px-4 sm:py-3 flex flex-col justify-between"
         >
           <div class="flex items-center justify-between text-zinc-500">
             <span class="text-[11px] font-medium">Keamanan Jalur</span>
@@ -202,73 +243,73 @@
               class="w-3.5 h-3.5 text-emerald-600"
             ></i>
           </div>
-          <div class="mt-1.5 flex items-baseline justify-between">
+          <div class="mt-1 flex items-baseline justify-between gap-1">
             <p
               id="val-bahaya"
-              class="text-base sm:text-lg font-bold tracking-tight text-zinc-950"
+              class="text-sm sm:text-lg font-bold tracking-tight text-zinc-950 truncate"
             >
               AMAN
             </p>
             <span
               id="badge-bahaya-sub"
-              class="text-[10px] font-medium text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-md"
+              class="text-[10px] font-medium text-emerald-600 bg-emerald-50 px-1.5 py-0.5 rounded-md shrink-0"
               >Clear</span
             >
           </div>
         </div>
 
         <div
-          class="startup-card rounded-2xl px-4 py-3 flex flex-col justify-between"
+          class="startup-card rounded-2xl px-3.5 py-2.5 sm:px-4 sm:py-3 flex flex-col justify-between"
         >
           <div class="flex items-center justify-between text-zinc-500">
             <span class="text-[11px] font-medium">Deteksi Objek</span>
             <i data-lucide="box" class="w-3.5 h-3.5 text-zinc-400"></i>
           </div>
-          <div class="mt-1.5 flex items-baseline justify-between">
+          <div class="mt-1 flex items-baseline justify-between">
             <p
-              class="text-base sm:text-lg font-bold tracking-tight text-zinc-950"
+              class="text-sm sm:text-lg font-bold tracking-tight text-zinc-950"
             >
               <span id="val-objek-count">0</span>
-              <span class="text-xs font-medium text-zinc-400">aktif</span>
+              <span class="text-[11px] font-medium text-zinc-400">aktif</span>
             </p>
-            <span class="text-[10px] font-mono text-zinc-500">YOLOv8n</span>
+            <span class="text-[10px] font-mono text-zinc-500">YOLOv8</span>
           </div>
         </div>
 
         <div
-          class="startup-card rounded-2xl px-4 py-3 flex flex-col justify-between"
+          class="startup-card rounded-2xl px-3.5 py-2.5 sm:px-4 sm:py-3 flex flex-col justify-between"
         >
           <div class="flex items-center justify-between text-zinc-500">
             <span class="text-[11px] font-medium">Jarak Tempuh</span>
             <i data-lucide="route" class="w-3.5 h-3.5 text-zinc-400"></i>
           </div>
-          <div class="mt-1.5 flex items-baseline justify-between">
+          <div class="mt-1 flex items-baseline justify-between">
             <p
-              class="text-base sm:text-lg font-bold tracking-tight text-zinc-950"
+              class="text-sm sm:text-lg font-bold tracking-tight text-zinc-950"
             >
               <span id="val-jarak">0.00</span>
-              <span class="text-xs font-medium text-zinc-400">km</span>
+              <span class="text-[11px] font-medium text-zinc-400">km</span>
             </p>
             <span class="text-[10px] font-mono text-zinc-500">Sesi ini</span>
           </div>
         </div>
 
         <div
-          class="startup-card rounded-2xl px-4 py-3 flex flex-col justify-between"
+          class="startup-card rounded-2xl px-3.5 py-2.5 sm:px-4 sm:py-3 flex flex-col justify-between"
         >
           <div class="flex items-center justify-between text-zinc-500">
             <span class="text-[11px] font-medium">Tujuan Navigasi</span>
             <i data-lucide="navigation" class="w-3.5 h-3.5 text-blue-600"></i>
           </div>
-          <div class="mt-1.5 flex items-baseline justify-between gap-2">
+          <div class="mt-1 flex items-baseline justify-between gap-1.5">
             <p
               id="val-tujuan"
-              class="text-sm sm:text-base font-bold tracking-tight text-zinc-950 truncate"
+              class="text-xs sm:text-base font-bold tracking-tight text-zinc-950 truncate"
             >
               Tidak Ada
             </p>
             <span
-              class="text-[10px] font-medium text-blue-600 bg-blue-50 px-2 py-0.5 rounded-md shrink-0"
+              class="text-[10px] font-medium text-blue-600 bg-blue-50 px-1.5 py-0.5 rounded-md shrink-0"
               >OSRM</span
             >
           </div>
@@ -276,60 +317,58 @@
       </section>
 
       <!-- MAIN SPLIT WORKSPACE -->
-      <div class="flex-1 min-h-0 grid grid-cols-1 lg:grid-cols-12 gap-4">
-        <!-- PANEL KAMERA CLOUD STREAM + HASIL YOLOv8 (7 Kolom) -->
+      <div class="flex-1 min-h-0 grid grid-cols-1 lg:grid-cols-12 gap-3 lg:gap-4">
+        <!-- PANEL KAMERA CLOUD STREAM + HASIL YOLOv8 -->
         <section
           id="panel-kamera"
-          class="anim-item lg:col-span-7 min-h-0 startup-card rounded-2xl p-4 flex flex-col justify-between"
+          class="anim-item lg:col-span-7 min-h-0 startup-card rounded-2xl p-3.5 sm:p-4 flex flex-col justify-between"
         >
           <div
-            class="shrink-0 flex flex-wrap items-center justify-between gap-2 pb-2.5 border-b border-zinc-100"
+            class="shrink-0 flex items-center justify-between gap-2 pb-2.5 border-b border-zinc-100"
           >
-            <div class="flex items-center gap-2">
+            <div class="flex items-center gap-2 min-w-0">
               <span
                 id="cam-live-dot"
-                class="w-2 h-2 rounded-full bg-zinc-400"
+                class="w-2 h-2 shrink-0 rounded-full bg-zinc-400"
               ></span>
-              <h2 class="text-xs sm:text-sm font-bold text-zinc-900">
+              <h2 class="text-xs sm:text-sm font-bold text-zinc-900 truncate">
                 YOLOv8 Live Vision
               </h2>
               <span
                 id="badge-cam-mode"
-                class="font-mono text-[10px] font-semibold px-2 py-0.5 rounded-md bg-zinc-100 text-zinc-600 border border-zinc-200/70"
+                class="font-mono text-[9px] sm:text-[10px] font-semibold px-1.5 sm:px-2 py-0.5 rounded-md bg-zinc-100 text-zinc-600 border border-zinc-200/70 shrink-0"
               >
-                CLOUD STREAM
+                CLOUD
               </span>
             </div>
 
-            <div class="flex items-center gap-2">
-              <button
-                onclick="toggleStream()"
-                id="btn-stream"
-                class="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-zinc-950 hover:bg-zinc-800 text-white text-xs font-semibold transition cursor-pointer"
-              >
-                <i data-lucide="radio" class="w-3.5 h-3.5"></i>
-                <span id="txt-stream">Jeda Stream</span>
-              </button>
-            </div>
+            <button
+              onclick="toggleStream()"
+              id="btn-stream"
+              class="shrink-0 inline-flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-xl bg-zinc-950 hover:bg-zinc-800 active:scale-95 text-white text-[11px] sm:text-xs font-semibold transition cursor-pointer"
+            >
+              <i data-lucide="radio" class="w-3.5 h-3.5"></i>
+              <span id="txt-stream">Jeda</span>
+            </button>
           </div>
 
-          <!-- Layar Tunggal Kamera Online dari Firebase -->
+          <!-- Layar Kamera Proporsional untuk Smartphone (aspect-[4/3] di HP, flex-1 di Desktop) -->
           <div
-            class="relative flex-1 min-h-[280px] lg:min-h-0 my-3 rounded-xl overflow-hidden bg-zinc-950 border border-zinc-900 flex items-center justify-center"
+            class="relative w-full aspect-[4/3] sm:aspect-video lg:aspect-auto lg:flex-1 lg:min-h-0 my-2.5 sm:my-3 rounded-xl overflow-hidden bg-zinc-950 border border-zinc-900 flex items-center justify-center"
           >
             <img
               id="yolo-output-img"
               alt="YOLOv8 Cloud Detection"
-              class="hidden w-full h-full object-cover"
+              class="hidden w-full h-full object-contain bg-zinc-950"
             />
 
             <!-- Empty State -->
             <div
               id="kamera-placeholder"
-              class="p-6 text-center max-w-md flex flex-col items-center"
+              class="p-4 text-center max-w-xs flex flex-col items-center"
             >
               <div
-                class="w-11 h-11 rounded-xl bg-zinc-900 border border-zinc-800 flex items-center justify-center mb-2.5 text-zinc-400"
+                class="w-10 h-10 rounded-xl bg-zinc-900 border border-zinc-800 flex items-center justify-center mb-2 text-zinc-400"
               >
                 <i data-lucide="cloud-off" class="w-5 h-5"></i>
               </div>
@@ -339,14 +378,20 @@
               >
                 Menunggu Stream Kamera...
               </p>
+              <p class="text-[10px] text-zinc-400 mt-1">
+                Pastikan perangkat tongkat aktif terhubung internet
+              </p>
             </div>
 
             <!-- HUD Bawah pada Layar Kamera -->
             <div
-              class="absolute bottom-2.5 inset-x-2.5 flex items-center justify-between gap-2 bg-zinc-950/80 backdrop-blur-md px-3 py-2 rounded-lg border border-white/10"
+              class="absolute bottom-2 inset-x-2 flex items-center justify-between gap-2 bg-zinc-950/85 backdrop-blur-md px-2.5 py-1.5 rounded-lg border border-white/10"
             >
-              <div id="yolo-tags" class="flex flex-wrap items-center gap-1.5">
-                <span class="text-[11px] font-medium text-emerald-400"
+              <div
+                id="yolo-tags"
+                class="flex flex-wrap items-center gap-1 overflow-hidden max-h-10"
+              >
+                <span class="text-[10px] sm:text-[11px] font-medium text-emerald-400"
                   >● Jalur depan aman</span
                 >
               </div>
@@ -359,44 +404,38 @@
           </div>
 
           <div
-            class="shrink-0 flex items-center justify-between text-[11px] text-zinc-500"
+            class="shrink-0 flex items-center justify-between text-[10px] sm:text-[11px] text-zinc-500"
           >
-            <span
+            <span class="truncate"
               >Engine:
               <strong
                 id="engine-status-text"
                 class="text-zinc-800 font-semibold"
-                >Firebase Realtime Cloud Stream (VC-3B-8921)</strong
+                >Firebase Cloud Stream (VC-3B-8921)</strong
               ></span
             >
-            <button
-              onclick="bunyikanBuzzer()"
-              class="sm:hidden inline-flex items-center gap-1 text-zinc-900 font-semibold"
-            >
-              <i data-lucide="volume-2" class="w-3.5 h-3.5"></i>
-              <span>Ping Tongkat</span>
-            </button>
+            <span class="font-mono text-zinc-400 shrink-0 ml-2">1.5s sync</span>
           </div>
         </section>
 
-        <!-- PANEL GOOGLE MAPS (5 Kolom) -->
+        <!-- PANEL GOOGLE MAPS -->
         <section
           id="panel-peta"
-          class="anim-item lg:col-span-5 min-h-0 startup-card rounded-2xl p-4 flex flex-col justify-between"
+          class="anim-item lg:col-span-5 min-h-0 startup-card rounded-2xl p-3.5 sm:p-4 flex flex-col justify-between"
         >
           <div
-            class="shrink-0 flex items-center justify-between pb-2.5 border-b border-zinc-100"
+            class="shrink-0 flex flex-wrap items-center justify-between gap-2 pb-2.5 border-b border-zinc-100"
           >
-            <div class="flex items-center gap-2">
+            <div class="flex items-center gap-1.5">
               <i data-lucide="map-pin" class="w-4 h-4 text-[#1A73E8]"></i>
               <h2 class="text-xs sm:text-sm font-bold text-zinc-900">
                 Google Maps
               </h2>
             </div>
 
-            <div class="flex items-center gap-2">
+            <div class="flex items-center gap-1.5 sm:gap-2">
               <div
-                class="inline-flex bg-zinc-100 p-0.5 rounded-lg border border-zinc-200/70 text-[11px]"
+                class="inline-flex bg-zinc-100 p-0.5 rounded-lg border border-zinc-200/70 text-[10px] sm:text-[11px]"
               >
                 <button
                   onclick="ubahTipePeta('street')"
@@ -415,7 +454,7 @@
               </div>
 
               <label
-                class="inline-flex items-center gap-1 text-[11px] font-medium text-zinc-500 cursor-pointer select-none"
+                class="inline-flex items-center gap-1 text-[10px] sm:text-[11px] font-medium text-zinc-600 bg-zinc-50 px-2 py-1 rounded-lg border border-zinc-200/70 cursor-pointer select-none"
               >
                 <input
                   type="checkbox"
@@ -428,7 +467,7 @@
 
               <button
                 onclick="fokusPeta()"
-                class="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-zinc-100 hover:bg-zinc-200 text-zinc-900 text-[11px] font-semibold transition cursor-pointer"
+                class="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-zinc-100 hover:bg-zinc-200 active:scale-95 text-zinc-900 text-[10px] sm:text-[11px] font-semibold transition cursor-pointer"
               >
                 <i data-lucide="crosshair" class="w-3 h-3"></i>
                 <span>Fokus</span>
@@ -437,14 +476,14 @@
           </div>
 
           <div
-            class="flex-1 min-h-[280px] lg:min-h-0 my-3 rounded-xl overflow-hidden border border-zinc-200 bg-zinc-100"
+            class="flex-1 min-h-[260px] lg:min-h-0 my-2.5 sm:my-3 rounded-xl overflow-hidden border border-zinc-200 bg-zinc-100"
           >
             <div id="map"></div>
           </div>
 
           <div class="shrink-0 flex items-center justify-between gap-2 text-xs">
             <div
-              class="font-mono text-[11px] font-medium text-zinc-600 bg-zinc-100 px-2.5 py-1 rounded-lg"
+              class="font-mono text-[10px] sm:text-[11px] font-medium text-zinc-600 bg-zinc-100 px-2.5 py-1.5 rounded-lg truncate"
             >
               <span id="val-koordinat">-7.819602, 110.345458</span>
             </div>
@@ -452,25 +491,25 @@
               id="btn-gmaps-external"
               href="https://www.google.com/maps?q=-7.8196023,110.3454579"
               target="_blank"
-              class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#1A73E8] hover:bg-[#1557B0] text-white text-[11px] font-semibold transition shadow-2xs"
+              class="shrink-0 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#1A73E8] hover:bg-[#1557B0] active:scale-95 text-white text-[11px] font-semibold transition shadow-2xs"
             >
-              <i data-lucide="external-link" class="w-3 h-3"></i>
-              <span>Buka Rute Maps</span>
+              <i data-lucide="external-link" class="w-3.5 h-3.5"></i>
+              <span>Buka Maps</span>
             </a>
           </div>
         </section>
       </div>
     </main>
 
-    <!-- BOTTOM NAVIGATION (Smartphone) -->
+    <!-- BOTTOM NAVIGATION BAR (Android App Style) -->
     <nav
-      class="lg:hidden fixed bottom-0 inset-x-0 z-40 bg-white/95 backdrop-blur-xl border-t border-zinc-200 px-4 py-2"
+      class="app-bottom-nav lg:hidden fixed bottom-0 inset-x-0 z-40 bg-white/95 backdrop-blur-xl border-t border-zinc-200 px-3 pt-1.5 shadow-[0_-4px_16px_rgba(0,0,0,0.04)]"
     >
-      <div class="grid grid-cols-3 gap-1 max-w-sm mx-auto">
+      <div class="grid grid-cols-3 gap-1 max-w-md mx-auto">
         <button
           onclick="switchView('all')"
           data-tab="all"
-          class="tab-mobile active flex flex-col items-center py-1 text-zinc-950 font-bold text-[11px] cursor-pointer"
+          class="tab-mobile active flex flex-col items-center justify-center py-1.5 rounded-xl bg-zinc-100/80 text-zinc-950 font-bold text-[11px] transition cursor-pointer"
         >
           <i data-lucide="layout-grid" class="w-4 h-4 mb-0.5"></i>
           <span>Semua</span>
@@ -478,7 +517,7 @@
         <button
           onclick="switchView('cam')"
           data-tab="cam"
-          class="tab-mobile flex flex-col items-center py-1 text-zinc-400 font-medium text-[11px] cursor-pointer"
+          class="tab-mobile flex flex-col items-center justify-center py-1.5 rounded-xl text-zinc-400 font-medium text-[11px] transition cursor-pointer"
         >
           <i data-lucide="camera" class="w-4 h-4 mb-0.5"></i>
           <span>Kamera</span>
@@ -486,18 +525,18 @@
         <button
           onclick="switchView('map')"
           data-tab="map"
-          class="tab-mobile flex flex-col items-center py-1 text-zinc-400 font-medium text-[11px] cursor-pointer"
+          class="tab-mobile flex flex-col items-center justify-center py-1.5 rounded-xl text-zinc-400 font-medium text-[11px] transition cursor-pointer"
         >
           <i data-lucide="map-pin" class="w-4 h-4 mb-0.5"></i>
-          <span>Google Maps</span>
+          <span>Peta GPS</span>
         </button>
       </div>
     </nav>
 
-    <!-- TOAST -->
+    <!-- TOAST (Posisi Atas Tengah di HP agar tidak terpotong layar) -->
     <div
       id="toast"
-      class="fixed top-16 right-5 z-50 translate-x-[130%] transition-transform duration-300 bg-zinc-950 text-white px-4 py-2.5 rounded-xl shadow-lg border border-zinc-800 text-xs font-medium flex items-center gap-2"
+      class="fixed top-16 left-1/2 -translate-x-1/2 sm:left-auto sm:right-5 sm:translate-x-0 opacity-0 pointer-events-none transition-all duration-300 z-50 bg-zinc-950 text-white px-4 py-2.5 rounded-xl shadow-lg border border-zinc-800 text-xs font-medium flex items-center gap-2 whitespace-nowrap"
     >
       <span class="w-2 h-2 rounded-full bg-emerald-400"></span>
       <span id="toast-msg">Notifikasi</span>
@@ -610,12 +649,14 @@
       }
 
       // ==========================================
-      // 2. SWITCH VIEW RESPONSIF
+      // 2. SWITCH VIEW RESPONSIF (ANDROID & DESKTOP)
       // ==========================================
       function switchView(mode) {
         const pRingkasan = document.getElementById("panel-ringkasan");
         const pPeta = document.getElementById("panel-peta");
         const pKamera = document.getElementById("panel-kamera");
+
+        pPeta.classList.remove("map-fullscreen-mobile");
 
         if (mode === "all") {
           pRingkasan.classList.remove("hidden");
@@ -632,6 +673,7 @@
           pRingkasan.classList.add("hidden");
           pKamera.classList.add("hidden");
           pPeta.classList.remove("hidden");
+          pPeta.classList.add("map-fullscreen-mobile");
           pPeta.classList.replace("lg:col-span-5", "lg:col-span-12");
         }
 
@@ -644,11 +686,15 @@
         document.querySelectorAll(".tab-mobile").forEach((btn) => {
           const active = btn.dataset.tab === mode;
           btn.className = active
-            ? "tab-mobile active flex flex-col items-center py-1 text-zinc-950 font-bold text-[11px] cursor-pointer"
-            : "tab-mobile flex flex-col items-center py-1 text-zinc-400 font-medium text-[11px] cursor-pointer";
+            ? "tab-mobile active flex flex-col items-center justify-center py-1.5 rounded-xl bg-zinc-100/80 text-zinc-950 font-bold text-[11px] transition cursor-pointer"
+            : "tab-mobile flex flex-col items-center justify-center py-1.5 rounded-xl text-zinc-400 font-medium text-[11px] transition cursor-pointer";
         });
 
-        setTimeout(() => map.invalidateSize(), 150);
+        window.scrollTo({ top: 0, behavior: "smooth" });
+        setTimeout(() => {
+          map.invalidateSize();
+          if (mode === "map") map.setView([latNow, lonNow], DEFAULT_ZOOM);
+        }, 180);
       }
 
       // ==========================================
@@ -658,12 +704,12 @@
         streamAktif = !streamAktif;
         const txtBtn = document.getElementById("txt-stream");
         if (streamAktif) {
-          txtBtn.innerText = "Jeda Stream";
-          showToast("Live stream Firebase dilanjutkan");
+          txtBtn.innerText = "Jeda";
+          showToast("Live stream dilanjutkan");
           ambilDataFirebase();
         } else {
-          txtBtn.innerText = "Lanjut Stream";
-          showToast("Live stream Firebase dijeda");
+          txtBtn.innerText = "Lanjut";
+          showToast("Live stream dijeda");
         }
       }
 
@@ -679,22 +725,22 @@
 
         if (bahaya.includes("BAHAYA")) {
           elBahaya.className =
-            "text-base sm:text-lg font-bold tracking-tight text-rose-600";
+            "text-sm sm:text-lg font-bold tracking-tight text-rose-600 truncate";
           subBahaya.innerText = "Alert";
           subBahaya.className =
-            "text-[10px] font-medium text-rose-600 bg-rose-50 px-2 py-0.5 rounded-md";
+            "text-[10px] font-medium text-rose-600 bg-rose-50 px-1.5 py-0.5 rounded-md shrink-0";
         } else if (bahaya === "WASPADA") {
           elBahaya.className =
-            "text-base sm:text-lg font-bold tracking-tight text-amber-600";
+            "text-sm sm:text-lg font-bold tracking-tight text-amber-600 truncate";
           subBahaya.innerText = "Caution";
           subBahaya.className =
-            "text-[10px] font-medium text-amber-700 bg-amber-50 px-2 py-0.5 rounded-md";
+            "text-[10px] font-medium text-amber-700 bg-amber-50 px-1.5 py-0.5 rounded-md shrink-0";
         } else {
           elBahaya.className =
-            "text-base sm:text-lg font-bold tracking-tight text-zinc-950";
+            "text-sm sm:text-lg font-bold tracking-tight text-zinc-950 truncate";
           subBahaya.innerText = "Clear";
           subBahaya.className =
-            "text-[10px] font-medium text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-md";
+            "text-[10px] font-medium text-emerald-600 bg-emerald-50 px-1.5 py-0.5 rounded-md shrink-0";
         }
 
         const tagContainer = document.getElementById("yolo-tags");
@@ -704,12 +750,12 @@
           objekList[0] !== "Area aman / kosong";
 
         if (!adaObjekAsli) {
-          tagContainer.innerHTML = `<span class="text-[11px] font-medium text-emerald-400">● Jalur depan aman / bebas rintangan</span>`;
+          tagContainer.innerHTML = `<span class="text-[10px] sm:text-[11px] font-medium text-emerald-400">● Jalur depan aman / bebas rintangan</span>`;
         } else {
           tagContainer.innerHTML = objekList
             .map(
               (o) =>
-                `<span class="px-2 py-0.5 rounded-md bg-white/10 text-zinc-100 text-[11px] font-medium border border-white/10">${o}</span>`,
+                `<span class="px-2 py-0.5 rounded-md bg-white/15 text-zinc-100 text-[10px] sm:text-[11px] font-medium border border-white/10">${o}</span>`,
             )
             .join("");
         }
@@ -743,13 +789,13 @@
 
           if (online) {
             pill.className =
-              "inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200/80";
+              "inline-flex items-center gap-1.5 px-2 sm:px-2.5 py-1 rounded-full text-[10px] sm:text-[11px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200/80";
             dot.className =
               "w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse";
             txt.innerText = "Online";
           } else {
             pill.className =
-              "inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold bg-zinc-100 text-zinc-600 border border-zinc-200";
+              "inline-flex items-center gap-1.5 px-2 sm:px-2.5 py-1 rounded-full text-[10px] sm:text-[11px] font-semibold bg-zinc-100 text-zinc-600 border border-zinc-200";
             dot.className = "w-1.5 h-1.5 rounded-full bg-zinc-400";
             txt.innerText = "Offline";
           }
@@ -771,26 +817,24 @@
             ph.classList.add("hidden");
 
             if (online) {
-              badgeCam.innerText = "YOLOv8 CLOUD LIVE";
+              badgeCam.innerText = "LIVE";
               badgeCam.className =
-                "font-mono text-[10px] font-semibold px-2 py-0.5 rounded-md bg-emerald-50 text-emerald-700 border border-emerald-200";
+                "font-mono text-[9px] sm:text-[10px] font-semibold px-1.5 sm:px-2 py-0.5 rounded-md bg-emerald-50 text-emerald-700 border border-emerald-200 shrink-0";
               dotCam.className =
-                "w-2 h-2 rounded-full bg-emerald-500 animate-pulse";
-              engineTxt.innerText =
-                "Firebase Realtime Cloud Stream (Terhubung)";
+                "w-2 h-2 shrink-0 rounded-full bg-emerald-500 animate-pulse";
+              engineTxt.innerText = "Firebase Cloud Stream (Terhubung)";
             } else {
-              badgeCam.innerText = "LAST FRAME";
+              badgeCam.innerText = "LAST";
               badgeCam.className =
-                "font-mono text-[10px] font-semibold px-2 py-0.5 rounded-md bg-amber-50 text-amber-700 border border-amber-200";
-              dotCam.className = "w-2 h-2 rounded-full bg-amber-500";
-              engineTxt.innerText =
-                "Menampilkan frame terakhir (Perangkat sedang offline)";
+                "font-mono text-[9px] sm:text-[10px] font-semibold px-1.5 sm:px-2 py-0.5 rounded-md bg-amber-50 text-amber-700 border border-amber-200 shrink-0";
+              dotCam.className = "w-2 h-2 shrink-0 rounded-full bg-amber-500";
+              engineTxt.innerText = "Frame terakhir (Perangkat offline)";
             }
           } else {
             yoloImg.classList.add("hidden");
             ph.classList.remove("hidden");
-            badgeCam.innerText = "NO SIGNAL";
-            dotCam.className = "w-2 h-2 rounded-full bg-zinc-400";
+            badgeCam.innerText = "STANDBY";
+            dotCam.className = "w-2 h-2 shrink-0 rounded-full bg-zinc-400";
           }
 
           // Update HUD Deteksi Objek & Status Bahaya dari Firebase
@@ -872,8 +916,8 @@
       function showToast(msg) {
         const t = document.getElementById("toast");
         document.getElementById("toast-msg").innerText = msg;
-        t.classList.remove("translate-x-[130%]");
-        setTimeout(() => t.classList.add("translate-x-[130%]"), 3000);
+        t.classList.remove("opacity-0", "pointer-events-none");
+        setTimeout(() => t.classList.add("opacity-0", "pointer-events-none"), 3000);
       }
     </script>
   </body>
